@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nyc-yellow-taxi"
-version = "0.0.1"
+version = "0.0.2"
 description = "NYC Yellow Taxi with Medallion Architecture and Metabase dashboard"
 authors = ["Sebastian Carrasco <sebx23@gmail.com>"]
 license = "MIT"
