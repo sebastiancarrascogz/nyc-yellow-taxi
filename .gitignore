@@ -225,3 +225,5 @@ data/*
 *.parquet
 *.csv
 notebooks/exploration/
+*.duckdb
+.dlt/secrets.toml
