@@ -226,4 +226,5 @@ data/*
 *.csv
 notebooks/exploration/
 *.duckdb
-.dlt/secrets.toml
+.dlt/
+!dbt/nyc_yellow_taxi/seeds/*.csv

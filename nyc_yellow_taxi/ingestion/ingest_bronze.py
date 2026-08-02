@@ -4,9 +4,9 @@ import dlt
 from dlt.sources.helpers import requests
 import pandas as pd
 from typing import Generator
-from config import PIPELINE_START_DATE, PIPELINE_END_DATE
+from nyc_yellow_taxi.config import PIPELINE_START_DATE, PIPELINE_END_DATE
 
-@dlt.resource(write_disposition="append")
+@dlt.resource(name="yellow_trips", write_disposition="append")
 def load_parquet_date_range(start_date: datetime.datetime, end_date: datetime.datetime) -> Generator[pd.DataFrame, None, None]:
     for date in pd.date_range(start=start_date, end=end_date, freq='MS'):
         url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{date.strftime('%Y-%m')}.parquet"
@@ -17,7 +17,7 @@ def load_parquet_date_range(start_date: datetime.datetime, end_date: datetime.da
 pipeline = dlt.pipeline(
     pipeline_name="nyc_taxi",
     destination="bigquery",
-    dataset_name="bronze"
+    dataset_name="nyc_taxi_bronze"
 )
 
 if __name__ == "__main__":

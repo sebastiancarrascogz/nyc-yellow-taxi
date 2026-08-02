@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: yellow_trips
+    description: "Tabla Silver con viajes de taxi NYC limpios y validados"
+    columns:
+      - name: trip_id
+        description: "Primary key sintética generada con MD5"
+        tests:
+          - unique
+          - not_null
