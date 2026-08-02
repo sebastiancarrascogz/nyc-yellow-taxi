@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: personalproject-463600
+    schema: nyc_taxi_bronze
+    tables:
+      - name: yellow_trips
