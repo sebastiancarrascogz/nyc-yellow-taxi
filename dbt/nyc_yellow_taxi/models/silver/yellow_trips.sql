@@ -16,6 +16,8 @@ ri.name as ratecode_name,
 yt.store_and_fwd_flag,      
 pu_zones.zone as pu_location_name,            
 do_zones.zone as do_location_name,
+pu_zones.borough as pu_borough_name,
+do_zones.borough as do_borough_name,
 pt.name as payment_type_name,       
 yt.fare_amount,     
 case when yt.fare_amount < 0 then True else False end as is_fare_negative, -- .5             
