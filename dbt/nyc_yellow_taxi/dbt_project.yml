@@ -44,7 +44,22 @@ seeds:
     +schema: seeds
 
 vars:
-  mta_tax_max: 0.5
-  improvement_surcharge_max: 5
-  congestion_surcharge_max: 2.5
-  airport_fee_max: 1.75 
+  silver:
+    mta_tax_max: 0.5
+    improvement_surcharge_max: 5
+    congestion_surcharge_max: 2.5
+    airport_fee_max: 1.75 
+  gold:
+    trip_distance:
+      short_max: 2.25
+      medium_max: 5.3
+      long_max: 10.05 # Mayor a este umbral -> viaje 'muy largo'
+    tip_amount:
+      low_max: 1
+      medium_max: 3.30
+      high_max: 8.68 # Mayor que este umbral -> propina 'muy alta'
+    total_amount:
+      low_max: 15.6
+      medium_max: 29.05
+      high_max: 53.24 # Mayor a este umbral -> monto 'muy alto'
+

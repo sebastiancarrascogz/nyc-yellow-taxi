@@ -11,10 +11,3 @@ models:
     description: "Viajes por hora del día (formato 24hrs)"
   - name: trips_by_weekday
     description: "Viajes por día de la semana (L-D)"
-
-    columns:
-      - name: trip_id
-        description: "Primary key sintética generada con MD5"
-        tests:
-          - unique
-          - not_null

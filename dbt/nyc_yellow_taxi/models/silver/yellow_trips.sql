@@ -10,7 +10,7 @@ TO_HEX(MD5(CONCAT(CAST(yt.vendor_id AS STRING),
 vi.name as vendor_name,
 yt.tpep_pickup_datetime,
 yt.tpep_dropoff_datetime,
-yt.passenger_count,         
+cast(yt.passenger_count as int64) as passenger_count,         
 yt.trip_distance,           
 ri.name as ratecode_name,              
 yt.store_and_fwd_flag,      
@@ -50,11 +50,11 @@ and yt.passenger_count >= 1 and yt.passenger_count < 6 -- 2. Pasajeros
 and yt.trip_distance > 0 and yt.trip_distance < 30 -- 3. Filtro de distancia 
 and yt.fare_amount >= -140 and yt.fare_amount <= 140 and yt.fare_amount <> 0 -- .5
 and yt.extra >= -15 and yt.extra <= 15 -- .6
-and yt.mta_tax >= -{{var('mta_tax_max')}} and yt.mta_tax <= {{var('mta_tax_max')}} -- .7 (Parametrizado)
+and yt.mta_tax >= -{{var('silver')['mta_tax_max']}} and yt.mta_tax <= {{var('silver')['mta_tax_max']}} -- .7 (Parametrizado)
 and yt.tip_amount >= -100 and yt.tip_amount <= 100 -- .8
 and yt.tolls_amount >= -35 and yt.tolls_amount <= 35 -- .9
-and yt.improvement_surcharge >= -{{var('improvement_surcharge_max')}} and yt.improvement_surcharge <= {{var('improvement_surcharge_max')}} -- .10
+and yt.improvement_surcharge >= -{{var('silver')['improvement_surcharge_max']}} and yt.improvement_surcharge <= {{var('silver')['improvement_surcharge_max']}} -- .10
 and yt.total_amount >= -200 and yt.total_amount <= 200 and yt.total_amount <> 0 -- .11
-and coalesce(yt.congestion_surcharge, 0) >= -{{var('congestion_surcharge_max')}} and coalesce(yt.congestion_surcharge, 0) <= {{var('congestion_surcharge_max')}} -- .12
-and coalesce(yt.airport_fee, 0) >= -{{var('airport_fee_max')}} and coalesce(yt.airport_fee, 0) <= {{var('airport_fee_max')}} -- .13
-QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY tpep_pickup_datetime) = 1 -- Unicidad 
+and coalesce(yt.congestion_surcharge, 0) >= -{{var('silver')['congestion_surcharge_max']}} and coalesce(yt.congestion_surcharge, 0) <= {{var('silver')['congestion_surcharge_max']}} -- .12
+and coalesce(yt.airport_fee, 0) >= -{{var('silver')['airport_fee_max']}} and coalesce(yt.airport_fee, 0) <= {{var('silver')['airport_fee_max']}} -- .13
+QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY tpep_pickup_datetime) = 1 -- unicidad 
