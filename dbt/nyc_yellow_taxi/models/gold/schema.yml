@@ -1,13 +1,7 @@
 version: 2
 
 models:
-  - name: trips_summary
-    description: "Resumen de viajes con columnas necesarias para KPIs de Dashboard"
-  - name: trips_by_borough
-    description: "Viajes por distrito de NYC"
-  - name: trips_by_date
-    description: "Viajes por fecha (formato dd-mm)"
-  - name: trips_by_hour
-    description: "Viajes por hora del día (formato 24hrs)"
-  - name: trips_by_weekday
-    description: "Viajes por día de la semana (L-D)"
+  - name: fct_taxi_trips
+    description: "Tabla con columnas necesarias para KPIs de Dashboard"
+  - name: agg_taxi_trips_dashboard
+    description: "Tabla de viajes agregados para Looker"

@@ -1,16 +1,9 @@
 
-# Name your project! Project names should contain only lowercase characters
-# and underscores. A good package name should reflect your organization's
-# name or the intended use of these models
 name: 'nyc_yellow_taxi'
 version: '1.0.0'
 
-# This setting configures which "profile" dbt uses for this project.
 profile: 'nyc_yellow_taxi'
 
-# These configurations specify where dbt should look for different types of files.
-# The `model-paths` config, for example, states that models in this project can be
-# found in the "models/" directory. You probably won't need to change these!
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
@@ -18,20 +11,15 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
-clean-targets:         # directories to be removed by `dbt clean`
+clean-targets:         
   - "target"
   - "dbt_packages"
-
 
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
 models:
   nyc_yellow_taxi:
-    # Config indicated by + and applies to all files under models/example/
     silver:
       +schema: silver
       +materialized: table
@@ -53,13 +41,13 @@ vars:
     trip_distance:
       short_max: 2.25
       medium_max: 5.3
-      long_max: 10.05 # Mayor a este umbral -> viaje 'muy largo'
+      long_max: 10.05 
     tip_amount:
       low_max: 1
       medium_max: 3.30
-      high_max: 8.68 # Mayor que este umbral -> propina 'muy alta'
+      high_max: 8.68 
     total_amount:
       low_max: 15.6
       medium_max: 29.05
-      high_max: 53.24 # Mayor a este umbral -> monto 'muy alto'
+      high_max: 53.24 
 

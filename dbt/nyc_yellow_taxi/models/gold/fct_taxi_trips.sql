@@ -2,6 +2,8 @@
 
 select 
 trip_id,
+vendor_name,
+fare_amount,
 tpep_pickup_datetime,
 tpep_dropoff_datetime,
 passenger_count,
@@ -39,5 +41,6 @@ from {{ref('yellow_trips')}}
 where not is_extra_negative 
 and not is_tip_negative 
 and not is_total_amount_negative 
+and not is_fare_negative
 and not is_congestion_surcharge_negative 
 and not is_airport_fee_negative 
