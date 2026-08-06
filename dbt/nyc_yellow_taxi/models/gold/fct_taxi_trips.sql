@@ -14,6 +14,8 @@ case
     when trip_distance <= {{var('gold')['trip_distance']['long_max']}} then 'long'
     else 'very long' end as trip_distance_categ,
 ratecode_name,
+pu_location_id,
+do_location_id,
 pu_borough_name,
 do_borough_name,
 payment_type_name,
