@@ -5,3 +5,5 @@ models:
     description: "Tabla con columnas necesarias para KPIs de Dashboard"
   - name: agg_taxi_trips_daily
     description: "Tabla principal de viajes agregados por día para Looker"
+  - name: agg_taxi_trips_hourly
+    description: "Tabla complementaria de viajes agregados por hora para gráfica de viajes por horario"  
