@@ -3,5 +3,5 @@ version: 2
 models:
   - name: fct_taxi_trips
     description: "Tabla con columnas necesarias para KPIs de Dashboard"
-  - name: agg_taxi_trips_dashboard
-    description: "Tabla de viajes agregados para Looker"
+  - name: agg_taxi_trips_daily
+    description: "Tabla principal de viajes agregados por día para Looker"
