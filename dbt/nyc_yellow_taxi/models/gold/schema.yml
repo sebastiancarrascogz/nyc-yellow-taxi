@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: fct_taxi_trips
+    description: "Tabla con columnas necesarias para KPIs de Dashboard"
+  - name: agg_taxi_trips_daily
+    description: "Tabla principal de viajes agregados por día para Looker"
+  - name: agg_taxi_trips_hourly
+    description: "Tabla complementaria de viajes agregados por hora para gráfica de viajes por horario" 
+  - name: agg_pickup_zone_daily
+    description: "Tabla que contiene la información que se mostrará en el mapa"    
