@@ -40,7 +40,8 @@ congestion_surcharge > 0 as has_congestion_surcharge,
 airport_fee,
 airport_fee > 0 as has_airport_fee
 from {{ref('yellow_trips')}}
-where not is_extra_negative 
+where payment_type_name not in ('Dispute', 'No charge') 
+and not is_extra_negative 
 and not is_tip_negative 
 and not is_total_amount_negative 
 and not is_fare_negative

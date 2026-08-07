@@ -19,7 +19,7 @@ pu_zones.zone as pu_location_name,
 yt.do_location_id,
 do_zones.zone as do_location_name,
 pu_zones.borough as pu_borough_name,
-do_zones.borough as do_borough_name,
+case when do_zones.borough = "N/A" then "Outside of NYC" else do_zones.borough end as do_borough_name,
 pt.name as payment_type_name,       
 yt.fare_amount,     
 case when yt.fare_amount < 0 then True else False end as is_fare_negative, -- .5             
@@ -45,7 +45,8 @@ left join {{ref('payment_type')}} pt on yt.payment_type = pt.id
 left join {{ref('ratecode_id')}} ri on coalesce(yt.ratecode_id, 99) = ri.id -- 4. Imputar nulos a 99
 left join {{ref('taxi_zone_lookup')}} pu_zones on yt.pu_location_id = pu_zones.location_id
 left join {{ref('taxi_zone_lookup')}} do_zones on yt.do_location_id = do_zones.location_id
-where yt.tpep_pickup_datetime < yt.tpep_dropoff_datetime -- 1. Inconsistencia de fechas
+where yt.pu_location_id not in (264,265) and yt.do_location_id <> 264 -- 0. Filtro de locationIDs
+and yt.tpep_pickup_datetime < yt.tpep_dropoff_datetime -- 1. Inconsistencia de fechas
 and yt.tpep_pickup_datetime >= '2009-01-01' and yt.tpep_dropoff_datetime >= '2009-01-01'
 and  yt.tpep_pickup_datetime <= current_timestamp() and yt.tpep_dropoff_datetime <= current_timestamp()
 and yt.passenger_count >= 1 and yt.passenger_count < 6 -- 2. Pasajeros
