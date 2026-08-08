@@ -1,7 +1,7 @@
 [tool.poetry]
 packages = [{include = "nyc_yellow_taxi"}]
 name = "nyc-yellow-taxi"
-version = "0.0.5"
+version = "0.0.6"
 description = "NYC Yellow Taxi with Medallion Architecture and Looker dashboard"
 authors = ["Sebastian Carrasco <sebx23@gmail.com>"]
 license = "MIT"
@@ -18,6 +18,7 @@ pandas = "^3.0.3"
 pyarrow = "^25.0.0"
 duckdb = "^1.5.4"
 dbt-bigquery = "^1.12.0"
+geopandas = "^1.1.4"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -27,5 +28,10 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "ipykernel (>=7.3.0,<8.0.0)",
     "plotly (>=6.9.0,<7.0.0)",
-    "nbformat (>=5.10.4,<6.0.0)"
+    "nbformat (>=5.10.4,<6.0.0)",
+    "matplotlib (>=3.11.1,<4.0.0)"
 ]
+
+[tool.poetry.scripts]
+ingest-yellow-trips = "nyc_yellow_taxi.ingestion.ingest_bronze:ingest_yellow_trips"
+ingest-taxi-zones = "nyc_yellow_taxi.ingestio.load_taxi_zones_shp:ingest_taxi_zones"

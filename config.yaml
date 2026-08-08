@@ -1,3 +1,11 @@
 pipeline:
   start_date: "2024-01"
   end_date: "2024-03"
+
+bigquery:
+  bronze_dataset: nyc_taxi_bronze
+
+taxi_zones:
+  source_path: data/taxi_zones/taxi_zones.shp
+  target_crs: EPSG:4326
+  table_name: taxi_zones
