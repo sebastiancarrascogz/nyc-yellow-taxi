@@ -4,9 +4,9 @@ import dlt
 from dlt.sources.helpers import requests
 import pandas as pd
 from typing import Generator
-from nyc_yellow_taxi.config import PIPELINE_START_DATE, PIPELINE_END_DATE
+from nyc_yellow_taxi.config import settings
 
-@dlt.resource(name="yellow_trips", write_disposition="append")
+@dlt.resource(name="yellow_trips", write_disposition="replace")
 def load_parquet_date_range(start_date: datetime.datetime, end_date: datetime.datetime) -> Generator[pd.DataFrame, None, None]:
     for date in pd.date_range(start=start_date, end=end_date, freq='MS'):
         url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{date.strftime('%Y-%m')}.parquet"
@@ -14,17 +14,27 @@ def load_parquet_date_range(start_date: datetime.datetime, end_date: datetime.da
         df = pd.read_parquet(io.BytesIO(response.content))
         yield df
 
-pipeline = dlt.pipeline(
-    pipeline_name="nyc_taxi",
-    destination="bigquery",
-    dataset_name="nyc_taxi_bronze"
-)
+def create_pipeline() -> dlt.Pipeline:
+    return dlt.pipeline(
+        pipeline_name="nyc_taxi",
+        destination="bigquery",
+        dataset_name=settings.bronze_dataset,
+    )
 
-if __name__ == "__main__":
+def ingest_yellow_trips() -> None:
+    start_date = datetime.datetime.strptime(settings.pipeline_start_date,"%Y-%m",)
+    end_date = datetime.datetime.strptime(settings.pipeline_end_date,"%Y-%m",)
+
+    pipeline = create_pipeline()
+
     load_info = pipeline.run(
         load_parquet_date_range(
-            start_date=datetime.datetime.strptime(PIPELINE_START_DATE, "%Y-%m"),
-            end_date=datetime.datetime.strptime(PIPELINE_END_DATE, "%Y-%m")
+            start_date=start_date,
+            end_date=end_date,
         )
     )
+
     print(load_info)
+
+if __name__ == "__main__":
+    ingest_yellow_trips()
