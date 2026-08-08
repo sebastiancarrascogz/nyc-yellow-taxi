@@ -9,3 +9,11 @@ models:
         tests:
           - unique
           - not_null
+  - name: taxi_zones
+    description: "Tabla geoespacial de zonas y distritos de NYC"
+    columns:
+      - name: location_id
+        description: "Primary key natural de las zonas de NYC"
+        tests:
+          - unique
+          - not_null
