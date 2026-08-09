@@ -1,7 +1,7 @@
 [tool.poetry]
 packages = [{include = "nyc_yellow_taxi"}]
 name = "nyc-yellow-taxi"
-version = "0.0.6"
+version = "0.0.8"
 description = "NYC Yellow Taxi with Medallion Architecture and Looker dashboard"
 authors = ["Sebastian Carrasco <sebx23@gmail.com>"]
 license = "MIT"
@@ -34,4 +34,4 @@ dev = [
 
 [tool.poetry.scripts]
 ingest-yellow-trips = "nyc_yellow_taxi.ingestion.ingest_bronze:ingest_yellow_trips"
-ingest-taxi-zones = "nyc_yellow_taxi.ingestio.load_taxi_zones_shp:ingest_taxi_zones"
+ingest-taxi-zones = "nyc_yellow_taxi.ingestion.load_taxi_zones_shp:ingest_taxi_zones"
