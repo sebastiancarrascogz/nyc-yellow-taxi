@@ -8,4 +8,6 @@ models:
   - name: agg_taxi_trips_hourly
     description: "Tabla complementaria de viajes agregados por hora para gráfica de viajes por horario" 
   - name: agg_pickup_zone_daily
-    description: "Tabla que contiene la información que se mostrará en el mapa"    
+    description: "Tabla que contiene la información que se mostrará en el mapa" 
+  - name: dim_taxi_zones
+    description: "Tabla dimensional que contiene las zonas de NYC"    
