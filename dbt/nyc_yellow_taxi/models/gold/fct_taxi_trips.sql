@@ -9,10 +9,10 @@ tpep_dropoff_datetime,
 passenger_count,
 trip_distance,
 case 
-    when trip_distance <= {{var('gold')['trip_distance']['short_max']}} then 'short'
-    when trip_distance <= {{var('gold')['trip_distance']['medium_max']}} then 'medium'
-    when trip_distance <= {{var('gold')['trip_distance']['long_max']}} then 'long'
-    else 'very long' end as trip_distance_categ,
+    when trip_distance <= {{var('gold')['trip_distance']['short_max']}} then concat('Corto (≤',cast({{var('gold')['trip_distance']['short_max']}} as string),' mi)')
+    when trip_distance <= {{var('gold')['trip_distance']['medium_max']}} then concat('Medio (',cast({{var('gold')['trip_distance']['short_max']}} as string), '-', cast({{var('gold')['trip_distance']['medium_max']}} as string),' mi)')
+    when trip_distance <= {{var('gold')['trip_distance']['long_max']}} then concat('Largo (',cast({{var('gold')['trip_distance']['medium_max']}} as string), '-', cast({{var('gold')['trip_distance']['long_max']}} as string),' mi)')
+    else concat('Muy Largo (≥',cast({{var('gold')['trip_distance']['long_max']}} as string),' mi)') end as trip_distance_categ,
 ratecode_name,
 pu_location_id,
 do_location_id,
