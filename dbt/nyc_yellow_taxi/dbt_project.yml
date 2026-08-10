@@ -37,6 +37,7 @@ vars:
     improvement_surcharge_max: 5
     congestion_surcharge_max: 2.5
     airport_fee_max: 1.75 
+    trip_duration_max: 120
   gold:
     trip_distance:
       short_max: 2.25
