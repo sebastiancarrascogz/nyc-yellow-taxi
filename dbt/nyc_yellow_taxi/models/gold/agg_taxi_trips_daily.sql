@@ -3,6 +3,7 @@
 with agg_daily as (
     select 
 date(tpep_pickup_datetime) as pickup_date,
+round(sum(trip_duration_minutes), 2) as trip_duration_minutes_sum,
 pu_borough_name,
 do_borough_name,
 trip_distance_categ,

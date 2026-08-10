@@ -6,6 +6,7 @@ vendor_name,
 fare_amount,
 tpep_pickup_datetime,
 tpep_dropoff_datetime,
+round(trip_duration_minutes, 2) as trip_duration_minutes,
 passenger_count,
 trip_distance,
 case 
