@@ -19,7 +19,9 @@ pu_location_id,
 do_location_id,
 pu_borough_name,
 do_borough_name,
-payment_type_name,
+case 
+    when payment_type_name = 'Cash' then 'Tarjeta de crédito' 
+    when payment_type_name = 'Credit card' then 'Efectivo' else 'Otro' end as payment_type_name,
 extra,
 extra > 0 as has_extra, 
 tip_amount,
@@ -42,6 +44,7 @@ airport_fee,
 airport_fee > 0 as has_airport_fee
 from {{ref('yellow_trips')}}
 where payment_type_name not in ('Dispute', 'No charge') 
+and pu_borough_name <> 'EWR' -- zona fuera de NYC 
 and not is_extra_negative 
 and not is_tip_negative 
 and not is_total_amount_negative 
