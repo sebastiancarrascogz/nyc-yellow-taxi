@@ -8,8 +8,8 @@ TO_HEX(MD5(CONCAT(CAST(yt.vendor_id AS STRING),
     CAST(yt.do_location_id AS STRING)
 ))) as trip_id, 
 vi.name as vendor_name,
-yt.tpep_pickup_datetime,
-yt.tpep_dropoff_datetime,
+datetime(yt.tpep_pickup_datetime, 'America/New_York') as tpep_pickup_datetime,
+datetime(yt.tpep_dropoff_datetime,'America/New_York') as tpep_dropoff_datetime,
 timestamp_diff(yt.tpep_dropoff_datetime, yt.tpep_pickup_datetime, second)/60.0 as trip_duration_minutes,
 cast(yt.passenger_count as int64) as passenger_count,         
 yt.trip_distance,           
@@ -39,7 +39,9 @@ case when yt.total_amount < 0 then True else False end as is_total_amount_negati
 yt.congestion_surcharge,    
 case when yt.congestion_surcharge < 0 then True else False end as is_congestion_surcharge_negative, 
 yt.airport_fee,             
-case when yt.airport_fee < 0 then True else False end as is_airport_fee_negative 
+case when yt.airport_fee < 0 then True else False end as is_airport_fee_negative,
+yt.source_file_month,
+yt.ingested_at 
 from {{source('bronze', 'yellow_trips')}} yt
 left join {{ref('vendor_id')}} vi on yt.vendor_id = vi.id
 left join {{ref('payment_type')}} pt on yt.payment_type = pt.id
@@ -47,7 +49,7 @@ left join {{ref('ratecode_id')}} ri on coalesce(yt.ratecode_id, 99) = ri.id
 left join {{ref('taxi_zone_lookup')}} pu_zones on yt.pu_location_id = pu_zones.location_id
 left join {{ref('taxi_zone_lookup')}} do_zones on yt.do_location_id = do_zones.location_id
 where yt.pu_location_id not in (264,265) and yt.do_location_id <> 264 
-and yt.tpep_pickup_datetime >= '2009-01-01' and yt.tpep_dropoff_datetime >= '2009-01-01'
+and datetime(yt.tpep_pickup_datetime, 'America/New_York') >= '2009-01-01' and datetime(yt.tpep_dropoff_datetime, 'America/New_York') >= '2009-01-01'
 and  yt.tpep_pickup_datetime <= current_timestamp() and yt.tpep_dropoff_datetime <= current_timestamp()
 and timestamp_diff(yt.tpep_dropoff_datetime, yt.tpep_pickup_datetime, second) > 0 -- Filtra DO < PU 
 and timestamp_diff(yt.tpep_dropoff_datetime,yt.tpep_pickup_datetime, second) <= {{ var('silver')['trip_duration_max'] }} * 60
@@ -62,4 +64,4 @@ and yt.improvement_surcharge >= -{{var('silver')['improvement_surcharge_max']}} 
 and yt.total_amount >= -200 and yt.total_amount <= 200 and yt.total_amount <> 0 
 and coalesce(yt.congestion_surcharge, 0) >= -{{var('silver')['congestion_surcharge_max']}} and coalesce(yt.congestion_surcharge, 0) <= {{var('silver')['congestion_surcharge_max']}} 
 and coalesce(yt.airport_fee, 0) >= -{{var('silver')['airport_fee_max']}} and coalesce(yt.airport_fee, 0) <= {{var('silver')['airport_fee_max']}} 
-QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY tpep_pickup_datetime) = 1 -- unicidad 
+QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY yt.ingested_at) = 1 -- unicidad 

@@ -2,18 +2,31 @@ version: 2
 
 models:
   - name: yellow_trips
-    description: "Tabla Silver con viajes de taxi NYC limpios y validados"
+    description: "Tabla Silver con viajes de taxi NYC limpios y validados."
     columns:
       - name: trip_id
         description: "Primary key sintética generada con MD5"
         tests:
           - unique
           - not_null
+      - name: tpep_pickup_datetime
+        description: "Fecha y hora local de inicio del viaje en America/New_York."
+      - name: source_file_month
+        description: "Mes de los datos descargados."
+        tests:
+          - unique
+          - not_null
+      - name: ingested_at
+        description: "Fecha de ingesta."
+        tests:
+          - unique
+          - not_null
+  
   - name: taxi_zones
     description: "Tabla geoespacial de zonas y distritos de NYC"
     columns:
       - name: location_id
-        description: "Primary key natural de las zonas de NYC"
+        description: "Primary key natural de las zonas de NYC."
         tests:
           - unique
           - not_null
