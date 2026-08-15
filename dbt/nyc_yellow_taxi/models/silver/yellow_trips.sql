@@ -39,7 +39,9 @@ case when yt.total_amount < 0 then True else False end as is_total_amount_negati
 yt.congestion_surcharge,    
 case when yt.congestion_surcharge < 0 then True else False end as is_congestion_surcharge_negative, 
 yt.airport_fee,             
-case when yt.airport_fee < 0 then True else False end as is_airport_fee_negative 
+case when yt.airport_fee < 0 then True else False end as is_airport_fee_negative,
+yt.source_file_month,
+yt.ingested_at 
 from {{source('bronze', 'yellow_trips')}} yt
 left join {{ref('vendor_id')}} vi on yt.vendor_id = vi.id
 left join {{ref('payment_type')}} pt on yt.payment_type = pt.id
@@ -62,4 +64,4 @@ and yt.improvement_surcharge >= -{{var('silver')['improvement_surcharge_max']}} 
 and yt.total_amount >= -200 and yt.total_amount <= 200 and yt.total_amount <> 0 
 and coalesce(yt.congestion_surcharge, 0) >= -{{var('silver')['congestion_surcharge_max']}} and coalesce(yt.congestion_surcharge, 0) <= {{var('silver')['congestion_surcharge_max']}} 
 and coalesce(yt.airport_fee, 0) >= -{{var('silver')['airport_fee_max']}} and coalesce(yt.airport_fee, 0) <= {{var('silver')['airport_fee_max']}} 
-QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY tpep_pickup_datetime) = 1 -- unicidad 
+QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY yt.ingested_at) = 1 -- unicidad 

@@ -18,6 +18,9 @@ def load_parquet_date_range(start_date: datetime.datetime, end_date: datetime.da
         url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{date.strftime('%Y-%m')}.parquet"
         response = requests.get(url)
         df = pd.read_parquet(io.BytesIO(response.content))
+        ingested_at = pd.Timestamp.now(tz="UTC")
+        df["source_file_month"] = date.date()
+        df["ingested_at"] = ingested_at
         df = normalize_trip_timestamps(df, source_timezone="America/New_York")
         yield df
 
