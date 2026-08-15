@@ -8,8 +8,8 @@ TO_HEX(MD5(CONCAT(CAST(yt.vendor_id AS STRING),
     CAST(yt.do_location_id AS STRING)
 ))) as trip_id, 
 vi.name as vendor_name,
-yt.tpep_pickup_datetime,
-yt.tpep_dropoff_datetime,
+datetime(yt.tpep_pickup_datetime, 'America/New_York') as tpep_pickup_datetime,
+datetime(yt.tpep_dropoff_datetime,'America/New_York') as tpep_dropoff_datetime,
 timestamp_diff(yt.tpep_dropoff_datetime, yt.tpep_pickup_datetime, second)/60.0 as trip_duration_minutes,
 cast(yt.passenger_count as int64) as passenger_count,         
 yt.trip_distance,           
@@ -47,7 +47,7 @@ left join {{ref('ratecode_id')}} ri on coalesce(yt.ratecode_id, 99) = ri.id
 left join {{ref('taxi_zone_lookup')}} pu_zones on yt.pu_location_id = pu_zones.location_id
 left join {{ref('taxi_zone_lookup')}} do_zones on yt.do_location_id = do_zones.location_id
 where yt.pu_location_id not in (264,265) and yt.do_location_id <> 264 
-and yt.tpep_pickup_datetime >= '2009-01-01' and yt.tpep_dropoff_datetime >= '2009-01-01'
+and datetime(yt.tpep_pickup_datetime, 'America/New_York') >= '2009-01-01' and datetime(yt.tpep_dropoff_datetime, 'America/New_York') >= '2009-01-01'
 and  yt.tpep_pickup_datetime <= current_timestamp() and yt.tpep_dropoff_datetime <= current_timestamp()
 and timestamp_diff(yt.tpep_dropoff_datetime, yt.tpep_pickup_datetime, second) > 0 -- Filtra DO < PU 
 and timestamp_diff(yt.tpep_dropoff_datetime,yt.tpep_pickup_datetime, second) <= {{ var('silver')['trip_duration_max'] }} * 60
