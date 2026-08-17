@@ -1,5 +1,9 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='incremental',
+    incremental_strategy='merge',
+    unique_key='trip_id') }}
 
+with incoming as (
 select 
 TO_HEX(MD5(CONCAT(CAST(yt.vendor_id AS STRING),
     CAST(yt.tpep_pickup_datetime AS STRING),
@@ -40,6 +44,19 @@ yt.congestion_surcharge,
 case when yt.congestion_surcharge < 0 then True else False end as is_congestion_surcharge_negative, 
 yt.airport_fee,             
 case when yt.airport_fee < 0 then True else False end as is_airport_fee_negative,
+case
+            when coalesce(yt.fare_amount, 0) < 0
+              or coalesce(yt.extra, 0) < 0
+              or coalesce(yt.mta_tax, 0) < 0
+              or coalesce(yt.tip_amount, 0) < 0
+              or coalesce(yt.tolls_amount, 0) < 0
+              or coalesce(yt.improvement_surcharge, 0) < 0
+              or coalesce(yt.total_amount, 0) < 0
+              or coalesce(yt.congestion_surcharge, 0) < 0
+              or coalesce(yt.airport_fee, 0) < 0
+            then true
+            else false
+        end as has_negative_amount,
 yt.source_file_month,
 yt.ingested_at 
 from {{source('bronze', 'yellow_trips')}} yt
@@ -49,6 +66,9 @@ left join {{ref('ratecode_id')}} ri on coalesce(yt.ratecode_id, 99) = ri.id
 left join {{ref('taxi_zone_lookup')}} pu_zones on yt.pu_location_id = pu_zones.location_id
 left join {{ref('taxi_zone_lookup')}} do_zones on yt.do_location_id = do_zones.location_id
 where yt.pu_location_id not in (264,265) and yt.do_location_id <> 264 
+{% if is_incremental() %}
+and yt.source_file_month = date('{{ var("batch_month") }}')
+{% endif %}
 and datetime(yt.tpep_pickup_datetime, 'America/New_York') >= '2009-01-01' and datetime(yt.tpep_dropoff_datetime, 'America/New_York') >= '2009-01-01'
 and  yt.tpep_pickup_datetime <= current_timestamp() and yt.tpep_dropoff_datetime <= current_timestamp()
 and timestamp_diff(yt.tpep_dropoff_datetime, yt.tpep_pickup_datetime, second) > 0 -- Filtra DO < PU 
@@ -64,4 +84,19 @@ and yt.improvement_surcharge >= -{{var('silver')['improvement_surcharge_max']}} 
 and yt.total_amount >= -200 and yt.total_amount <= 200 and yt.total_amount <> 0 
 and coalesce(yt.congestion_surcharge, 0) >= -{{var('silver')['congestion_surcharge_max']}} and coalesce(yt.congestion_surcharge, 0) <= {{var('silver')['congestion_surcharge_max']}} 
 and coalesce(yt.airport_fee, 0) >= -{{var('silver')['airport_fee_max']}} and coalesce(yt.airport_fee, 0) <= {{var('silver')['airport_fee_max']}} 
-QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY yt.ingested_at) = 1 -- unicidad 
+qualify row_number() over (
+    partition by trip_id
+    order by
+        source_file_month desc,
+        ingested_at desc,
+        has_negative_amount asc
+) = 1 -- unicidad 
+)
+select i.*
+from incoming i
+{% if is_incremental() %}
+left join {{ this }} t on i.trip_id = t.trip_id
+where t.trip_id is null
+   or i.source_file_month > t.source_file_month
+   or (i.source_file_month = t.source_file_month and i.ingested_at > t.ingested_at)
+{% endif %}
