@@ -12,11 +12,19 @@ def normalize_trip_timestamps(df: pd.DataFrame, source_timezone: str = "America/
         df[column] = (df[column].dt.tz_localize(source_timezone, nonexistent="NaT", ambiguous="NaT").dt.tz_convert("UTC"))
     return df
 
-@dlt.resource(name="yellow_trips", write_disposition="replace")
+@dlt.resource(
+        name="yellow_trips", 
+        merge_key="source_file_month",
+        write_disposition={
+            "disposition": "merge",
+            "strategy":"delete-insert"
+            }
+        )
 def load_parquet_date_range(start_date: datetime.datetime, end_date: datetime.datetime) -> Generator[pd.DataFrame, None, None]:
     for date in pd.date_range(start=start_date, end=end_date, freq='MS'):
         url = f"https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{date.strftime('%Y-%m')}.parquet"
-        response = requests.get(url)
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
         df = pd.read_parquet(io.BytesIO(response.content))
         ingested_at = pd.Timestamp.now(tz="UTC")
         df["source_file_month"] = date.date()

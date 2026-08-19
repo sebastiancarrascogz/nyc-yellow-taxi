@@ -1,0 +1,145 @@
+unit_tests:
+  - name: test_older_batch_does_not_replace_newer
+    model: yellow_trips
+
+    overrides:
+      macros:
+        is_incremental: true
+      vars:
+        batch_month: "2024-04-01"
+
+    given:
+      - input: source('bronze', 'yellow_trips')
+        format: sql
+        rows: |
+          select
+            1 as vendor_id,
+            timestamp('2024-04-15 16:00:00+00') as tpep_pickup_datetime,
+            timestamp('2024-04-15 16:10:00+00') as tpep_dropoff_datetime,
+            1.0 as passenger_count,
+            2.0 as trip_distance,
+            1.0 as ratecode_id,
+            'N' as store_and_fwd_flag,
+            161 as pu_location_id,
+            236 as do_location_id,
+            1 as payment_type,
+            10.0 as fare_amount,
+            0.0 as extra,
+            0.5 as mta_tax,
+            2.0 as tip_amount,
+            0.0 as tolls_amount,
+            1.0 as improvement_surcharge,
+            13.5 as total_amount,
+            0.0 as congestion_surcharge,
+            0.0 as airport_fee,
+            date('2024-04-01') as source_file_month,
+            timestamp('2026-08-18 23:00:00+00') as ingested_at
+
+      - input: ref('vendor_id')
+        rows:
+          - {id: 1, name: "Vendor"}
+
+      - input: ref('payment_type')
+        rows:
+          - {id: 1, name: "Credit card"}
+
+      - input: ref('ratecode_id')
+        rows:
+          - {id: 1, name: "Standard rate"}
+
+      - input: ref('taxi_zone_lookup')
+        rows:
+          - {location_id: 161, zone: "Midtown Center", borough: "Manhattan"}
+          - {location_id: 236, zone: "Upper East Side North", borough: "Manhattan"}
+
+      - input: this
+        format: sql
+        rows: |
+          select
+            to_hex(md5(concat(
+              cast(1 as string),
+              cast(timestamp('2024-04-15 16:00:00+00') as string),
+              cast(timestamp('2024-04-15 16:10:00+00') as string),
+              cast(161 as string),
+              cast(236 as string)
+            ))) as trip_id,
+            date('2024-06-01') as source_file_month,
+            timestamp('2026-08-01 12:00:00+00') as ingested_at
+
+    expect:
+      rows: []
+
+# 2. Test para verificar que un batch más reciente reemplaza una versión de batch anterior del mismo viaje.
+  - name: test_newer_batch_replaces_older_batch
+    model: yellow_trips
+
+    overrides:
+      macros:
+        is_incremental: true
+      vars:
+        batch_month: "2024-06-01"
+
+    given:
+      - input: source('bronze', 'yellow_trips')
+        format: sql
+        rows: |
+          select
+            1 as vendor_id,
+            timestamp('2024-04-15 16:00:00+00') as tpep_pickup_datetime,
+            timestamp('2024-04-15 16:10:00+00') as tpep_dropoff_datetime,
+            1.0 as passenger_count,
+            2.0 as trip_distance,
+            1.0 as ratecode_id,
+            'N' as store_and_fwd_flag,
+            161 as pu_location_id,
+            236 as do_location_id,
+            1 as payment_type,
+            10.0 as fare_amount,
+            0.0 as extra,
+            0.5 as mta_tax,
+            2.0 as tip_amount,
+            0.0 as tolls_amount,
+            1.0 as improvement_surcharge,
+            13.5 as total_amount,
+            0.0 as congestion_surcharge,
+            0.0 as airport_fee,
+            date('2024-06-01') as source_file_month,
+            timestamp('2026-06-01 10:00:00+00') as ingested_at
+
+      - input: ref('vendor_id')
+        rows:
+          - {id: 1, name: "Vendor"}
+
+      - input: ref('payment_type')
+        rows:
+          - {id: 1, name: "Credit card"}
+
+      - input: ref('ratecode_id')
+        rows:
+          - {id: 1, name: "Standard rate"}
+
+      - input: ref('taxi_zone_lookup')
+        rows:
+          - {location_id: 161, zone: "Midtown Center", borough: "Manhattan"}
+          - {location_id: 236, zone: "Upper East Side North", borough: "Manhattan"}
+
+      - input: this
+        format: sql
+        rows: |
+          select
+            to_hex(md5(concat(
+              cast(1 as string),
+              cast(timestamp('2024-04-15 16:00:00+00') as string),
+              cast(timestamp('2024-04-15 16:10:00+00') as string),
+              cast(161 as string),
+              cast(236 as string)
+            ))) as trip_id,
+            date('2024-04-01') as source_file_month,
+            timestamp('2026-08-01 09:00:00+00') as ingested_at
+
+    expect:
+      rows:
+        - {
+          source_file_month: "2024-06-01",
+          ingested_at: "2026-06-01 10:00:00+00"
+        }
