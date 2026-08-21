@@ -1,7 +1,13 @@
 {{ config(
     materialized='incremental',
     incremental_strategy='merge',
-    unique_key='trip_id') }}
+    unique_key='trip_id',
+    partition_by={
+        "field": "source_file_month",
+        "data_type": "date",
+        "granularity": "month"
+    },
+    cluster_by='trip_id')}}
 
 with incoming as (
 select 
