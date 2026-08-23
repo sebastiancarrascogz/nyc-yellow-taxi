@@ -1,8 +1,27 @@
-{{config(materialized='table')}}
+-- depends_on: {{ ref('yellow_trips') }}
+{{ config(
+    materialized='incremental',
+    incremental_strategy='insert_overwrite',
+    partition_by={
+        "field": "pickup_date",
+        "data_type": "date",
+        "granularity": "day"
+    }
+) }}
 
-with agg_daily as (
+with 
+{% if is_incremental() %}
+affected_dates as (
+    select distinct
+        date(tpep_pickup_datetime) as pickup_date
+    from {{ ref('yellow_trips') }}
+    where source_file_month = date('{{ var("batch_month") }}')
+),
+{% endif %}
+
+agg_daily as (
     select 
-date(tpep_pickup_datetime) as pickup_date,
+pickup_date,
 round(sum(trip_duration_minutes), 2) as trip_duration_minutes_sum,
 pu_borough_name,
 do_borough_name,
@@ -21,6 +40,9 @@ countif(has_congestion_surcharge is not true and has_airport_fee is not true) as
 sum(congestion_surcharge) as congestion_surcharge_sum,
 sum(airport_fee) as airport_fee_sum
 from {{ref('fct_taxi_trips')}}
+{% if is_incremental() %}
+where pickup_date in (select pickup_date from affected_dates)
+{% endif %}
 group by pickup_date, 
 pu_borough_name, 
 do_borough_name,

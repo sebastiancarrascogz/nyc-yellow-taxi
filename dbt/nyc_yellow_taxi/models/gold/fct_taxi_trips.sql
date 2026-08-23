@@ -1,4 +1,14 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='incremental',
+    incremental_strategy='merge',
+    unique_key='trip_id',
+    partition_by={
+        "field": "pickup_date",
+        "data_type": "date",
+        "granularity": "day"
+    },
+    cluster_by='trip_id'
+) }}
 
 select 
 trip_id,
@@ -20,8 +30,8 @@ do_location_id,
 pu_borough_name,
 do_borough_name,
 case 
-    when payment_type_name = 'Cash' then 'Tarjeta de crédito' 
-    when payment_type_name = 'Credit card' then 'Efectivo' else 'Otro' end as payment_type_name,
+    when payment_type_name = 'Cash' then 'Efectivo' 
+    when payment_type_name = 'Credit card' then 'Tarjeta de crédito' else 'Otro' end as payment_type_name,
 extra,
 extra > 0 as has_extra, 
 tip_amount,
@@ -41,7 +51,10 @@ case
 congestion_surcharge, 
 congestion_surcharge > 0 as has_congestion_surcharge, 
 airport_fee,
-airport_fee > 0 as has_airport_fee
+airport_fee > 0 as has_airport_fee,
+date(tpep_pickup_datetime) as pickup_date,
+source_file_month,
+ingested_at
 from {{ref('yellow_trips')}}
 where payment_type_name not in ('Dispute', 'No charge') 
 and pu_borough_name <> 'EWR' -- zona fuera de NYC 
@@ -51,3 +64,6 @@ and not is_total_amount_negative
 and not is_fare_negative
 and not is_congestion_surcharge_negative 
 and not is_airport_fee_negative 
+{% if is_incremental() %}
+and source_file_month = date('{{ var("batch_month") }}')
+{% endif %}
