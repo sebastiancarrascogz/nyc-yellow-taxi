@@ -1,7 +1,7 @@
 [tool.poetry]
 packages = [{include = "nyc_yellow_taxi"}]
 name = "nyc-yellow-taxi"
-version = "0.0.16"
+version = "0.0.17"
 description = "NYC Yellow Taxi with Medallion Architecture and Looker dashboard"
 authors = ["Sebastian Carrasco <sebx23@gmail.com>"]
 license = "MIT"
