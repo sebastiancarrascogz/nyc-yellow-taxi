@@ -1,13 +1,93 @@
 version: 2
 
 models:
+
   - name: fct_taxi_trips
     description: "Tabla con columnas necesarias para KPIs de Dashboard"
+    columns:
+
+      - name: trip_id
+        description: "Identificador único del viaje"
+        data_tests:
+          - not_null
+          - unique
+
+      - name: pickup_date
+        description: "Fecha local de inicio del viaje"
+        data_tests:
+          - not_null
+
+      - name: source_file_month
+        description: "Mes del archivo fuente desde el cual proviene el registro"
+        data_tests:
+          - not_null
+
+      - name: ingested_at
+        description: "Timestamp de ingesta del batch"
+        data_tests:
+          - not_null
+
+
   - name: agg_taxi_trips_daily
     description: "Tabla principal de viajes agregados por día para Looker"
+    columns:
+
+      - name: pickup_date
+        data_tests:
+          - not_null
+
+      - name: trip_count
+        data_tests:
+          - not_null
+
+
   - name: agg_taxi_trips_hourly
-    description: "Tabla complementaria de viajes agregados por hora para gráfica de viajes por horario" 
+    description: "Tabla complementaria de viajes agregados por hora para gráfica de viajes por horario"
+    columns:
+
+      - name: pickup_date
+        data_tests:
+          - not_null
+
+      - name: pickup_hour
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+                quote: false
+
+      - name: trip_count
+        data_tests:
+          - not_null
+
+
   - name: agg_pickup_zone_daily
-    description: "Tabla que contiene la información que se mostrará en el mapa" 
+    description: "Tabla que contiene la información que se mostrará en el mapa"
+    columns:
+
+      - name: pickup_date
+        data_tests:
+          - not_null
+
+      - name: pu_location_id
+        data_tests:
+          - not_null
+
+      - name: trip_count
+        data_tests:
+          - not_null
+
+
   - name: dim_taxi_zones
-    description: "Tabla dimensional que contiene las zonas de NYC"    
+    description: "Tabla dimensional que contiene las zonas de NYC"
+    columns:
+
+      - name: location_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: zone_name
+        data_tests:
+          - not_null
