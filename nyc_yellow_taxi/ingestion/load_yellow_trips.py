@@ -39,20 +39,26 @@ def create_pipeline() -> dlt.Pipeline:
         dataset_name=settings.bronze_dataset,
     )
 
-def ingest_yellow_trips() -> None:
-    start_date = datetime.datetime.strptime(settings.pipeline_start_date,"%Y-%m",)
-    end_date = datetime.datetime.strptime(settings.pipeline_end_date,"%Y-%m",)
-
+def ingest_yellow_trips(start_date: datetime.datetime, end_date: datetime.datetime) -> None:
     pipeline = create_pipeline()
-
-    load_info = pipeline.run(
-        load_parquet_date_range(
-            start_date=start_date,
-            end_date=end_date,
-        )
-    )
-
+    load_info = pipeline.run(load_parquet_date_range(start_date=start_date, end_date=end_date))
     print(load_info)
 
+def main() -> None:
+    start_date = datetime.datetime.strptime(
+        settings.pipeline_start_date,
+        "%Y-%m",
+    )
+    end_date = datetime.datetime.strptime(
+        settings.pipeline_end_date,
+        "%Y-%m",
+    )
+
+    ingest_yellow_trips(
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
 if __name__ == "__main__":
-    ingest_yellow_trips()
+    main()
