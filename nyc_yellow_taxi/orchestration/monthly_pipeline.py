@@ -15,7 +15,7 @@ DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "nyc_yellow_taxi"
 def get_target_batch_month() -> str:
     today = datetime.date.today()
     current_month = today.replace(day=1)
-    target_month = current_month - relativedelta(months=2)
+    target_month = current_month - relativedelta(months=4)
 
     return target_month.isoformat()
 
