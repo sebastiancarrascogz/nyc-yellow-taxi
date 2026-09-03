@@ -1,16 +1,31 @@
 import datetime
+import os
 import subprocess
 from pathlib import Path
-
+from typing import cast
 from dateutil.relativedelta import relativedelta
 from prefect import flow, task
+from prefect.blocks.system import Secret
 
 from nyc_yellow_taxi.ingestion.load_yellow_trips import ingest_yellow_trips
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "nyc_yellow_taxi"
+GCP_CREDENTIALS_PATH = Path("/tmp/gcp-service-account.json")
 
+def configure_gcp_credentials() -> None:
+    if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+        return
+
+    credentials = cast(Secret, Secret.load("gcp-nyc-taxi-service-account")).get()
+
+    GCP_CREDENTIALS_PATH.write_text(credentials, encoding="utf-8")
+    GCP_CREDENTIALS_PATH.chmod(0o600)
+
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(
+        GCP_CREDENTIALS_PATH
+    )
 
 def get_target_batch_month() -> str:
     today = datetime.date.today()
@@ -62,6 +77,8 @@ def run_dbt_tests() -> None:
 
 @flow
 def monthly_taxi_pipeline(batch_month: str | None = None) -> None:
+    configure_gcp_credentials()
+
     batch_month = batch_month or get_target_batch_month()
 
     ingest_month(batch_month)

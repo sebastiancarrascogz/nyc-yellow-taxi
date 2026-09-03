@@ -10,7 +10,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 @dataclass(frozen=True)
 class Settings:
-    google_application_credentials: str
     bigquery_project_id: str
     pipeline_start_date: str
     pipeline_end_date: str
@@ -34,7 +33,6 @@ def load_settings() -> Settings:
         config = yaml.safe_load(file) or {}
 
     return Settings(
-        google_application_credentials=require_env("GOOGLE_APPLICATION_CREDENTIALS"),
         bigquery_project_id=require_env("BIGQUERY_PROJECT_ID"),
         pipeline_start_date=config["pipeline"]["start_date"],
         pipeline_end_date=config["pipeline"]["end_date"],
