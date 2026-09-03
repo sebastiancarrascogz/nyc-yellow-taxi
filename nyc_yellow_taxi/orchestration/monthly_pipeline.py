@@ -47,6 +47,8 @@ def run_dbt_transformations(batch_month: str) -> None:
     command = [
         "dbt",
         "run",
+        "--profiles-dir",
+        str(DBT_PROJECT_DIR),
         "--select",
         "yellow_trips+",
         "--vars",
@@ -65,6 +67,8 @@ def run_dbt_tests() -> None:
     command = [
         "dbt",
         "test",
+        "--profiles-dir",
+        str(DBT_PROJECT_DIR),
         "--select",
         "yellow_trips+",
     ]
