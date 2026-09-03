@@ -1,5 +1,6 @@
 import datetime
 import os
+import json
 import subprocess
 from pathlib import Path
 from typing import cast
@@ -20,7 +21,7 @@ def configure_gcp_credentials() -> None:
 
     credentials = cast(Secret, Secret.load("gcp-nyc-taxi-service-account")).get()
 
-    GCP_CREDENTIALS_PATH.write_text(credentials, encoding="utf-8")
+    GCP_CREDENTIALS_PATH.write_text(json.dumps(credentials),encoding="utf-8")
     GCP_CREDENTIALS_PATH.chmod(0o600)
 
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(
