@@ -80,6 +80,23 @@ def run_dbt_tests() -> None:
     )
 
 
+@task
+def cleanup_old_data() -> None:
+    command = [
+        "dbt",
+        "run-operation",
+        "cleanup_retention",
+        "--profiles-dir",
+        str(DBT_PROJECT_DIR),
+    ]
+
+    subprocess.run(
+        command,
+        cwd=DBT_PROJECT_DIR,
+        check=True,
+    )
+
+
 @flow
 def monthly_taxi_pipeline(batch_month: str | None = None) -> None:
     configure_gcp_credentials()
@@ -89,6 +106,7 @@ def monthly_taxi_pipeline(batch_month: str | None = None) -> None:
     ingest_month(batch_month)
     run_dbt_transformations(batch_month)
     run_dbt_tests()
+    cleanup_old_data()
 
 if __name__ == "__main__":
     monthly_taxi_pipeline()
