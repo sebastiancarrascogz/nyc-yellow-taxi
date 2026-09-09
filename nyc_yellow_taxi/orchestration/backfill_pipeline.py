@@ -30,6 +30,7 @@ def backfill_taxi_pipeline(
 
         monthly_taxi_pipeline(
             batch_month=batch_month,
+            retention_mode="backfill",
         )
 
         current_month += relativedelta(months=1)
