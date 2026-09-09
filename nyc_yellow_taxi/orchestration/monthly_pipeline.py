@@ -63,7 +63,7 @@ def run_dbt_transformations(batch_month: str) -> None:
 
 
 @task
-def run_dbt_tests() -> None:
+def run_dbt_tests(batch_month: str) -> None:
     command = [
         "dbt",
         "test",
@@ -71,6 +71,8 @@ def run_dbt_tests() -> None:
         str(DBT_PROJECT_DIR),
         "--select",
         "yellow_trips+",
+        "--vars",
+        f"batch_month: {batch_month}",
     ]
 
     subprocess.run(
@@ -105,7 +107,7 @@ def monthly_taxi_pipeline(batch_month: str | None = None) -> None:
 
     ingest_month(batch_month)
     run_dbt_transformations(batch_month)
-    run_dbt_tests()
+    run_dbt_tests(batch_month)
     cleanup_old_data()
 
 if __name__ == "__main__":
