@@ -1,16 +1,27 @@
 {% macro cleanup_retention() %}
 
-    {% set retention_months = var('retention_months', 24) %}
+    {% set retention = var('retention') %}
+    {% set detail_months = retention['detail_months'] %}
+    {% set aggregate_months = retention['aggregate_months'] %}
+
     {% if execute %}
 
-        -- 1. determinar ventana de retencion desde dwh
+        {# 1. Determinar ventanas de retención desde el DWH #}
         {% set bounds_query %}
+
             select
                 max(source_file_month) as latest_month,
+
                 date_sub(
                     max(source_file_month),
-                    interval {{ retention_months - 1 }} month
-                ) as cutoff_month
+                    interval {{ detail_months - 1 }} month
+                ) as detail_cutoff,
+
+                date_sub(
+                    max(source_file_month),
+                    interval {{ aggregate_months - 1 }} month
+                ) as aggregate_cutoff
+
             from {{ source('bronze', 'yellow_trips') }}
 
         {% endset %}
@@ -18,7 +29,8 @@
         {% set bounds = run_query(bounds_query) %}
 
         {% set latest_month = bounds.columns[0].values()[0] %}
-        {% set cutoff_month = bounds.columns[1].values()[0] %}
+        {% set detail_cutoff = bounds.columns[1].values()[0] %}
+        {% set aggregate_cutoff = bounds.columns[2].values()[0] %}
 
 
         {% if latest_month is none %}
@@ -36,44 +48,55 @@
             ) }}
 
             {{ log(
-                "Retention cutoff: " ~ cutoff_month|string,
+                "Detail retention cutoff: " ~ detail_cutoff|string,
+                info=True
+            ) }}
+
+            {{ log(
+                "Aggregate retention cutoff: " ~ aggregate_cutoff|string,
                 info=True
             ) }}
 
 
-            --- 2. agregados de gold
+            {# 2. GOLD AGGREGATES - 24 meses #}
+
             {% do run_query(
                 "delete from " ~ ref('agg_taxi_trips_daily')
-                ~ " where pickup_date < date('" ~ cutoff_month ~ "')"
+                ~ " where pickup_date < date('" ~ aggregate_cutoff ~ "')"
             ) %}
 
             {% do run_query(
                 "delete from " ~ ref('agg_taxi_trips_hourly')
-                ~ " where pickup_date < date('" ~ cutoff_month ~ "')"
+                ~ " where pickup_date < date('" ~ aggregate_cutoff ~ "')"
             ) %}
 
             {% do run_query(
                 "delete from " ~ ref('agg_pickup_zone_daily')
-                ~ " where pickup_date < date('" ~ cutoff_month ~ "')"
+                ~ " where pickup_date < date('" ~ aggregate_cutoff ~ "')"
             ) %}
 
 
-            -- 3. fact gold
+            {# 3. GOLD FACT - 3 meses #}
+
             {% do run_query(
                 "delete from " ~ ref('fct_taxi_trips')
-                ~ " where pickup_date < date('" ~ cutoff_month ~ "')"
+                ~ " where pickup_date < date('" ~ detail_cutoff ~ "')"
             ) %}
 
-            -- 4. silver
+
+            {# 4. SILVER - 3 meses #}
+
             {% do run_query(
                 "delete from " ~ ref('yellow_trips')
-                ~ " where source_file_month < date('" ~ cutoff_month ~ "')"
+                ~ " where source_file_month < date('" ~ detail_cutoff ~ "')"
             ) %}
 
-            -- 5. bronze
+
+            {# 5. BRONZE - 3 meses #}
+
             {% do run_query(
                 "delete from " ~ source('bronze', 'yellow_trips')
-                ~ " where source_file_month < date('" ~ cutoff_month ~ "')"
+                ~ " where source_file_month < date('" ~ detail_cutoff ~ "')"
             ) %}
 
 

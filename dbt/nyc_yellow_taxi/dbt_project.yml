@@ -32,7 +32,9 @@ seeds:
     +schema: seeds
 
 vars:
-  retention_months: 24
+  retention:
+    detail_months: 3
+    aggregate_months: 24
   silver:
     mta_tax_max: 0.5
     improvement_surcharge_max: 5
