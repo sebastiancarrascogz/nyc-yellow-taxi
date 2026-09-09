@@ -83,13 +83,21 @@ def run_dbt_tests(batch_month: str) -> None:
 
 
 @task
-def cleanup_old_data() -> None:
+def cleanup_old_data(
+    batch_month: str,
+    retention_mode: str = "standard",
+) -> None:
     command = [
         "dbt",
         "run-operation",
         "cleanup_retention",
         "--profiles-dir",
         str(DBT_PROJECT_DIR),
+        "--vars",
+        json.dumps({
+            "batch_month": batch_month,
+            "retention_mode": retention_mode,
+        }),
     ]
 
     subprocess.run(
@@ -100,7 +108,7 @@ def cleanup_old_data() -> None:
 
 
 @flow
-def monthly_taxi_pipeline(batch_month: str | None = None) -> None:
+def monthly_taxi_pipeline(batch_month: str | None = None, retention_mode: str = "standard") -> None:
     configure_gcp_credentials()
 
     batch_month = batch_month or get_target_batch_month()
@@ -108,7 +116,7 @@ def monthly_taxi_pipeline(batch_month: str | None = None) -> None:
     ingest_month(batch_month)
     run_dbt_transformations(batch_month)
     run_dbt_tests(batch_month)
-    cleanup_old_data()
+    cleanup_old_data(batch_month=batch_month, retention_mode=retention_mode)
 
 if __name__ == "__main__":
     monthly_taxi_pipeline()

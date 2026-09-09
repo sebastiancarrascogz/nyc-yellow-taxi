@@ -4,9 +4,11 @@
     {% set detail_months = retention['detail_months'] %}
     {% set aggregate_months = retention['aggregate_months'] %}
 
+    {% set retention_mode = var('retention_mode', 'standard') %}
+    {% set batch_month = var('batch_month', none) %}
+
     {% if execute %}
 
-        {# 1. Determinar ventanas de retención desde el DWH #}
         {% set bounds_query %}
 
             select
@@ -15,7 +17,7 @@
                 date_sub(
                     max(source_file_month),
                     interval {{ detail_months - 1 }} month
-                ) as detail_cutoff,
+                ) as standard_detail_cutoff,
 
                 date_sub(
                     max(source_file_month),
@@ -29,36 +31,55 @@
         {% set bounds = run_query(bounds_query) %}
 
         {% set latest_month = bounds.columns[0].values()[0] %}
-        {% set detail_cutoff = bounds.columns[1].values()[0] %}
+        {% set standard_detail_cutoff = bounds.columns[1].values()[0] %}
         {% set aggregate_cutoff = bounds.columns[2].values()[0] %}
 
 
         {% if latest_month is none %}
 
             {{ log(
-                "Retention cleanup skipped: no batches found in bronze.",
+                "Retention cleanup skipped: no batches found.",
                 info=True
             ) }}
 
         {% else %}
 
+            {# Determinar cutoff del detalle #}
+
+            {% if retention_mode == 'backfill' %}
+
+                {% if batch_month is none %}
+                    {{ exceptions.raise_compiler_error(
+                        "batch_month is required in backfill mode"
+                    ) }}
+                {% endif %}
+
+                {% set detail_cutoff = batch_month %}
+
+            {% else %}
+
+                {% set detail_cutoff = standard_detail_cutoff %}
+
+            {% endif %}
+
+
             {{ log(
-                "Latest batch: " ~ latest_month|string,
+                "Retention mode: " ~ retention_mode,
                 info=True
             ) }}
 
             {{ log(
-                "Detail retention cutoff: " ~ detail_cutoff|string,
+                "Detail cutoff: " ~ detail_cutoff|string,
                 info=True
             ) }}
 
             {{ log(
-                "Aggregate retention cutoff: " ~ aggregate_cutoff|string,
+                "Aggregate cutoff: " ~ aggregate_cutoff|string,
                 info=True
             ) }}
 
 
-            {# 2. GOLD AGGREGATES - 24 meses #}
+            {# GOLD AGGREGATES: 24 meses #}
 
             {% do run_query(
                 "delete from " ~ ref('agg_taxi_trips_daily')
@@ -76,23 +97,17 @@
             ) %}
 
 
-            {# 3. GOLD FACT - 3 meses #}
+            {# DETAIL #}
 
             {% do run_query(
                 "delete from " ~ ref('fct_taxi_trips')
                 ~ " where pickup_date < date('" ~ detail_cutoff ~ "')"
             ) %}
 
-
-            {# 4. SILVER - 3 meses #}
-
             {% do run_query(
                 "delete from " ~ ref('yellow_trips')
                 ~ " where source_file_month < date('" ~ detail_cutoff ~ "')"
             ) %}
-
-
-            {# 5. BRONZE - 3 meses #}
 
             {% do run_query(
                 "delete from " ~ source('bronze', 'yellow_trips')
