@@ -1,7 +1,7 @@
 from prefect import flow
 from prefect.blocks.system import Secret
 from prefect.runner.storage import GitRepository
-
+from prefect.schedules import Cron
 from nyc_yellow_taxi.config import settings
 
 
@@ -39,6 +39,11 @@ JOB_VARIABLES = {
     },
 }
 
+MONTHLY_SCHEDULE = Cron(
+    "0 6 5 * *",
+    timezone="America/Santiago",
+)
+
 
 if __name__ == "__main__":
     flow.from_source(
@@ -48,6 +53,7 @@ if __name__ == "__main__":
         name="monthly-taxi-prod",
         work_pool_name="nyc-taxi-serverless",
         job_variables=JOB_VARIABLES,
+        schedules=[MONTHLY_SCHEDULE],
     )
 
     flow.from_source(
