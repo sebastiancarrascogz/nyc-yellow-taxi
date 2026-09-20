@@ -1,6 +1,6 @@
 pipeline:
-  start_date: "2024-06"
-  end_date: "2024-06"
+  start_date: "2025-08"
+  end_date: "2025-08"
 
 bigquery:
   bronze_dataset: nyc_taxi_bronze

@@ -1,201 +1,115 @@
-# NYC Yellow Taxi
+# NYC Yellow Taxi 
 
-Pipeline de datos de **NYC Yellow Taxi Trip Records** construido sobre una arquitectura **Medallion**, con ingesta mediante `dlt`, transformaciones con `dbt`, almacenamiento en **BigQuery**, orquestación con **Prefect** y visualización final en **Looker Studio**.
+Pipeline de datos construido sobre los **NYC Yellow Taxi Trip Records** publicados por NYC TLC.
 
-El pipeline está diseñado para procesar los archivos Parquet mensuales publicados por NYC TLC de forma incremental, idempotente y reproducible.
+El proyecto implementa ingesta incremental con `dlt`, modelado y testing con `dbt`, almacenamiento en **BigQuery**, orquestación con **Prefect Cloud** y visualización en **Data Studio** (antes Looker Studio).
 
-## Arquitectura
-
-```text
-NYC TLC Parquet
-      │
-      ▼
-     dlt
-      │
-      ▼
-┌─────────────┐
-│   Bronze    │
-│  BigQuery   │
-└──────┬──────┘
-       │
-       ▼
-      dbt
-       │
-       ▼
-┌─────────────┐
-│   Silver    │
-│  BigQuery   │
-└──────┬──────┘
-       │
-       ▼
-      dbt
-       │
-       ▼
-┌─────────────┐
-│    Gold     │
-│  BigQuery   │
-└──────┬──────┘
-       │
-       ▼
- Looker Studio
-```
-
-La ejecución del pipeline es coordinada mediante Prefect:
-
-```text
-monthly_taxi_pipeline
-        │
-        ▼
-   ingest_month
-        │
-        ▼
-run_dbt_transformations
-        │
-        ▼
-   run_dbt_tests
-```
+El pipeline está diseñado para procesar archivos Parquet mensuales de forma incremental, idempotente y reproducible.
 
 
-## Estructura principal
+## 1. Arquitectura
+
+<p align="center">
+  <img
+    src="docs/assets/architecture.svg"
+    alt="Arquitectura del pipeline NYC Yellow Taxi"
+    width="100%">
+</p>
+
+La ejecución mensual es coordinada mediante **Prefect Cloud**
+
+
+## 2. Stack 
+
+- Python 3.12
+- dlt
+- dbt Core
+- BigQuery
+- Prefect Cloud 
+- Data Studio (a.k.a Looker Studio)
+
+
+## 3. Estructura
 
 ```text
 nyc-yellow-taxi/
 ├── nyc_yellow_taxi/
+│   ├── config.py
 │   ├── ingestion/
 │   │   ├── load_yellow_trips.py
 │   │   └── load_taxi_zones_shp.py
-│   │
 │   └── orchestration/
 │       ├── monthly_pipeline.py
+│       ├── backfill_pipeline.py
 │       └── deploy.py
 │
 ├── dbt/
 │   └── nyc_yellow_taxi/
 │       ├── models/
+│       │   ├── silver/
+│       │   │   ├── yellow_trips.sql
+│       │   │   ├── taxi_zones.sql
+│       │   │   ├── schema.yml
+│       │   │   └── unit_tests.yml
+│       │   ├── gold/
+│       │   │   ├── fct_taxi_trips.sql
+│       │   │   ├── agg_taxi_trips_daily.sql
+│       │   │   ├── agg_taxi_trips_hourly.sql
+│       │   │   ├── agg_pickup_zone_daily.sql
+│       │   │   ├── dim_taxi_zones.sql
+│       │   │   └── schema.yml
+│       │   └── sources.yml
+│       ├── macros/
+│       │   └── cleanup_retention.sql
 │       ├── seeds/
-│       └── tests/
+│       │   ├── payment_type.csv
+│       │   ├── ratecode_id.csv
+│       │   ├── taxi_zone_lookup.csv
+│       │   └── vendor_id.csv
+│       ├── tests/
+│       │   └── test_agg_daily_matches_fact.sql
+│       ├── dbt_project.yml
+│       └── profiles.yml
 │
-├── .dlt/
+├── dashboard_config/
+│   ├── dashboard_serving_query.sql
+│   └── README.md
+│
+├── data/
+│   └── taxi_zones/
+│       └── taxi_zones.*
+│
+├── config.yaml
 ├── pyproject.toml
 ├── poetry.lock
+├── LICENSE
 └── README.md
 ```
 
-## Instalación
 
-Instalar las dependencias del proyecto:
 
-```bash
-poetry install
-```
+## 4. Modelo de datos
 
-El proyecto requiere credenciales válidas para acceder a Google Cloud / BigQuery y a los recursos utilizados por `dlt`.
+El proyecto sigue una arquitectura **Medallion**.
 
-Los secretos y credenciales no deben almacenarse en el repositorio.
+### Bronze 🟤
 
-## Ingesta
+Contiene los datos ingeridos desde los archivos Parquet publicados por NYC TLC.
 
-La ingesta descarga los archivos Parquet mensuales publicados por NYC TLC y los carga en Bronze mediante `dlt`.
-
-La unidad operacional del pipeline es un **mes**, representado mediante:
+Cada batch se identifica mediante:
 
 ```text
 source_file_month
 ```
 
-### Ejecución manual
+La reingesta de un mismo mes es idempotente y reemplaza el batch correspondiente.
 
-```bash
-poetry run ingest-yellow-trips
-```
+### Silver ⚪
 
-Esta ejecución utiliza las fechas configuradas en los settings del proyecto.
 
-La reingesta de un mismo `source_file_month` reemplaza el batch existente mediante una estrategia `delete-insert`.
+`yellow_trips` aplica limpieza, normalización, enriquecimiento y deduplicación.
 
-## dbt
-
-El proyecto dbt se encuentra en:
-
-```text
-dbt/nyc_yellow_taxi/
-```
-
-Los siguientes comandos deben ejecutarse desde ese directorio:
-
-```bash
-cd dbt/nyc_yellow_taxi
-```
-
-### Ejecutar un batch incremental
-
-Ejemplo para junio de 2024:
-
-```bash
-poetry run dbt run \
-  --select yellow_trips+ \
-  --vars 'batch_month: 2024-06-01'
-```
-
-La selección:
-
-```text
-yellow_trips+
-```
-
-ejecuta el modelo Silver `yellow_trips` y todos sus modelos downstream en Gold.
-
-### Ejecutar tests
-
-```bash
-poetry run dbt test --select yellow_trips+
-```
-
-### Compilar un modelo
-
-Permite inspeccionar el SQL generado por dbt sin ejecutar el modelo:
-
-```bash
-poetry run dbt compile \
-  --select fct_taxi_trips \
-  --vars 'batch_month: 2024-06-01'
-```
-
-### Full refresh
-
-Ejemplo:
-
-```bash
-poetry run dbt run \
-  --select yellow_trips \
-  --full-refresh
-```
-
-`--full-refresh` reconstruye completamente el modelo y omite la lógica incremental de `is_incremental()`.
-
-## Incrementalidad
-
-### Bronze
-
-Cada archivo Parquet mensual representa un batch identificado mediante:
-
-```text
-source_file_month
-```
-
-La reingesta de un mismo mes reemplaza el batch correspondiente en Bronze.
-
-Los registros conservan además:
-
-```text
-ingested_at
-```
-
-como metadata de la ejecución de ingesta.
-
-### Silver
-
-Silver utiliza:
+Utiliza:
 
 ```text
 materialization: incremental
@@ -203,86 +117,182 @@ strategy: merge
 unique_key: trip_id
 ```
 
-`trip_id` identifica cada viaje mediante un fingerprint generado a partir de atributos estables del registro.
-
-Cuando existe más de una versión del mismo `trip_id`, la precedencia utilizada es:
+La precedencia entre distintas versiones de un mismo viaje considera:
 
 ```text
 1. source_file_month
 2. ingested_at
 ```
 
-Esto evita que un backfill o una reingesta histórica sobrescriba una versión proveniente de un batch más reciente.
+Esto evita que un batch histórico sobrescriba una versión proveniente de un batch más reciente.
 
-La tabla Silver se encuentra físicamente optimizada mediante:
+### Gold 🟡
 
-```text
-PARTITION BY source_file_month
-CLUSTER BY trip_id
-```
-
-La deduplicación también prioriza registros sin montos negativos cuando existen representaciones equivalentes dentro del mismo batch.
-
-### Gold Fact
-
-`fct_taxi_trips` utiliza:
+La capa Gold contiene la fact principal y agregaciones optimizadas para consumo analítico:
 
 ```text
-materialization: incremental
-strategy: merge
-unique_key: trip_id
-```
-
-La tabla está optimizada para consultas analíticas mediante:
-
-```text
-PARTITION BY pickup_date
-CLUSTER BY trip_id
-```
-
-### Gold Aggregates
-
-Las tablas agregadas utilizan:
-
-```text
-incremental_strategy: insert_overwrite
-```
-
-Los modelos detectan las `pickup_date` afectadas por el batch actual y reconstruyen completamente esas particiones a partir del estado vigente de `fct_taxi_trips`.
-
-Esto permite mantener idempotencia y soportar registros tardíos sin acumular métricas incorrectamente al reprocesar un mismo batch.
-
-Los principales agregados son:
-
-```text
+fct_taxi_trips
 agg_taxi_trips_daily
 agg_taxi_trips_hourly
 agg_pickup_zone_daily
+dim_taxi_zones
 ```
 
-## Tests
+`fct_taxi_trips` utiliza estrategia incremental `merge`.
 
-El proyecto utiliza tests genéricos de dbt para validar propiedades como:
+Las tablas agregadas utilizan `insert_overwrite` y reconstruyen únicamente las fechas afectadas por el batch procesado.
+
+
+### Late-arriving data
+
+Los archivos mensuales pueden contener viajes cuya fecha de pickup pertenece al mes anterior.
+
+Los modelos detectan las fechas afectadas por cada `source_file_month` y reconstruyen completamente esas particiones desde `fct_taxi_trips`.
+
+La operación mensual conserva suficiente detalle histórico para poder reconstruir correctamente estas fechas.
+
+> [!IMPORTANT]
+> La lógica mensual está diseñada para procesar el batch más reciente de forma secuencial. Reprocesar arbitrariamente un mes histórico cuyo detalle ya fue eliminado por la política de retención puede no disponer del contexto necesario para reconstruir correctamente los registros tardíos.
+
+
+## 5. Política de retención
+
+Para mantener bajo el consumo de almacenamiento en BigQuery se utiliza una **estrategia de retención por capas (Tiered Retention)**:
 
 ```text
-not_null
-unique
-accepted_values
+Bronze detail    → 3 meses
+Silver detail    → 3 meses
+Gold fact        → 3 meses
+Gold aggregates  → 24 meses
 ```
 
-Silver incluye además unit tests para validar la lógica de precedencia incremental entre distintas versiones de un mismo `trip_id`.
+Las dimensiones estáticas se conservan completas.
 
-Entre los escenarios probados se encuentran:
+Los datos históricos pueden reconstruirse nuevamente desde la fuente pública de NYC TLC.
+
+
+## 6. Serving layer y dashboard
+
+Data Studio consume una **Custom Query** parametrizada almacenada como referencia en:
 
 ```text
-batch antiguo + versión más reciente existente
-→ el batch antiguo no reemplaza el registro
-
-batch más nuevo + versión antigua existente
-→ el batch más nuevo sí reemplaza el registro
+dashboard_config/dashboard_serving_query.sql
 ```
 
-Gold incluye además un test de reconciliación entre la fact y el agregado diario:
+La consulta unifica distintos granos analíticos mediante el campo `row_type` con los valores:
+
+```text
+daily
+daily_series
+hourly
+map
+```
+
+`daily_series` y `hourly` generan explícitamente fechas y horas sin actividad para evitar sesgos en métricas promedio.
+
+El dashboard utiliza seis filtros globales:
+
+```text
+Periodo
+Distrito de origen
+Distrito de destino
+Distancia
+Tipo de pago
+Número de pasajeros
+```
+
+La geometría de las zonas se incorpora únicamente después de agregar las métricas por zona, evitando repetir polígonos innecesariamente.
+
+> [!NOTE]
+> El cross-filtering entre gráficos está deshabilitado intencionalmente. Los filtros globales del dashboard se implementan mediante parámetros para mantener consistencia entre los distintos granos expuestos por la serving layer.
+
+<p align="center">
+  <img
+    src="docs/assets/dashboard.png"
+    alt="Dashboard NYC Yellow Taxi"
+    width="100%">
+</p>
+
+
+
+## 7. Orquestación
+
+La orquestación se realiza mediante Prefect Cloud.
+
+### Arquitectura de ejecución
+
+Prefect Cloud actúa como control plane del proyecto, mientras que los runs se ejecutan en infraestructura Serverless. Los deployments referencian el código versionado en GitHub y los flows interactúan directamente con NYC TLC y BigQuery durante la ejecución.
+
+<p align="center">
+  <img
+    src="docs/assets/orchestration-architecture.svg"
+    alt="Arquitectura de orquestación y ejecución con Prefect Cloud"
+    width="90%">
+</p>
+
+### Deployment mensual
+
+```text
+monthly-taxi-prod
+```
+
+Se ejecuta automáticamente:
+
+```text
+Día 5 de cada mes
+06:00
+America/Santiago
+```
+
+El mes objetivo corresponde al primer día del mes actual **menos cuatro meses**. Esto para garantizar que la ingesta se encuentre con datos disponibles en el [Sitio oficial de NYC TLC](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) debido al delay observado en la publicación de los datos.
+
+Ejemplo:
+
+```text
+Mes actual: 2026-10 (Octubre)
+→ batch objetivo: 2026-06-01 (Junio)
+```
+
+### Backfill
+
+Existe además un deployment manual:
+
+```text
+backfill-taxi-manual
+```
+
+utilizado para cargar rangos históricos de manera secuencial.
+
+> [!WARNING]
+> Los backfills deben ejecutarse sobre rangos continuos y en orden cronológico. Cuando se requiera reconstruir correctamente el inicio de un período, puede ser necesario incluir un mes anterior como contexto para los registros tardíos.
+
+
+## 8. Monitoreo
+
+Prefect posee una automatización asociada al pipeline mensual.
+
+Se envía una notificación por email cuando un flow run entra en estado:
+
+```text
+Failed ❌
+Crashed ⚠️
+```
+
+
+## 9. Tests
+
+El proyecto utiliza tests de dbt para validar:
+
+- valores `not_null`
+- unicidad
+- rangos válidos
+- consistencia de dimensiones
+- lógica incremental
+- reconciliación entre fact y agregados
+
+También existen unit tests para verificar la precedencia entre versiones de un mismo `trip_id`.
+
+El agregado diario incluye un test de reconciliación:
 
 ```text
 COUNT(fct_taxi_trips)
@@ -290,137 +300,121 @@ COUNT(fct_taxi_trips)
 SUM(agg_taxi_trips_daily.trip_count)
 ```
 
-Esto permite detectar pérdida o duplicación de viajes durante la agregación.
+sobre las fechas afectadas que todavía se encuentran disponibles en la capa de detalle.
 
-## Prefect
 
-La orquestación principal se encuentra en:
 
-```text
-nyc_yellow_taxi/orchestration/monthly_pipeline.py
+## 10. Ejecución local
+
+### 10.1 Instalación 
+
+```bash
+poetry install
 ```
 
-El flow ejecuta:
+La ejecución local requiere credenciales válidas para Google Cloud. El acceso a Prefect Cloud es necesario únicamente para crear o administrar los deployments.
 
-```text
-ingest_month
-      │
-      ▼
-run_dbt_transformations
-      │
-      ▼
-run_dbt_tests
+### Variables de entorno
+
+Para ejecución local, crear un archivo `.env` a partir del ejemplo:
+
+```bash
+cp .env.example .env
 ```
 
-La ingesta posee retries para tolerar fallos transitorios de red.
+Variables requeridas:
 
-Las transformaciones y tests dbt fallan inmediatamente cuando el proceso devuelve un código de salida distinto de cero.
+```bash
+BIGQUERY_PROJECT_ID=your-gcp-project-id
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
+- **BIGQUERY_PROJECT_ID:** ID del proyecto de Google Cloud donde se crearán los datasets de BigQuery.
 
-### Ejecución local del flow
+- **GOOGLE_APPLICATION_CREDENTIALS:** Ruta que apunta al archivo JSON de la service account utilizada por las librerías de Google y por dlt para autenticarse contra BigQuery.
+
+> [!NOTE]
+> En ejecución local, las credenciales de Google Cloud se proporcionan mediante `GOOGLE_APPLICATION_CREDENTIALS`. En Prefect Cloud, la service account se almacena en un Secret Block y se materializa temporalmente durante cada flow run.
+
+### 10.2 Ingesta
+
+```bash
+poetry run ingest-yellow-trips
+```
+Este comando considera el rango de fechas indicado en `start_date` y `end_date` dentro de `config.yaml`.
+
+### 10.3 dbt
+
+Desde:
+
+```bash
+cd dbt/nyc_yellow_taxi
+```
+
+Ejecutar un batch:
+
+```bash
+poetry run dbt run \
+  --select yellow_trips+ \
+  --vars '{"batch_month":"2026-05-01"}'
+```
+
+Ejecutar tests:
+
+```bash
+poetry run dbt test \
+  --select yellow_trips+ \
+  --vars '{"batch_month":"2026-05-01"}'
+```
+
+> [!TIP]
+> Para inspeccionar la lógica incremental generada para un batch sin modificar BigQuery, puede utilizarse `dbt compile` con el mismo `batch_month` que se ejecutaría en producción.
+
+
+```bash
+poetry run dbt compile \
+  --select fct_taxi_trips \
+  --vars '{"batch_month":"2026-05-01"}'
+```
+
+### 10.4 Flow mensual
 
 ```bash
 poetry run python -m nyc_yellow_taxi.orchestration.monthly_pipeline
 ```
 
-Si no se entrega explícitamente un `batch_month`, el flow calcula automáticamente el mes objetivo considerando un desfase de dos meses respecto del mes actual.
-
-Por ejemplo:
-
-```text
-Fecha actual:
-2026-08
-
-Batch objetivo:
-2026-06-01
-```
-
-Un `batch_month` explícito puede utilizarse para reprocesos o backfills.
-
-## Prefect Server local
-
-Levantar el servidor:
-
-```bash
-poetry run prefect server start
-```
-
-La UI queda disponible en:
-
-```text
-http://127.0.0.1:4200
-```
-
-Configurar el cliente local para utilizar ese servidor:
-
-```bash
-poetry run prefect config set \
-  PREFECT_API_URL="http://127.0.0.1:4200/api"
-```
-
-## Work Pool y Worker local
-
-Crear un Process Work Pool:
-
-```bash
-poetry run prefect work-pool create \
-  local-process-pool \
-  --type process
-```
-
-Levantar un worker conectado al pool:
-
-```bash
-poetry run prefect worker start \
-  --pool local-process-pool
-```
-
-El worker queda escuchando ejecuciones asignadas al work pool y las ejecuta como procesos locales.
-
-## Deployment local
-
-La configuración del deployment se encuentra separada de la lógica del flow en:
-
-```text
-nyc_yellow_taxi/orchestration/deploy.py
-```
-
-Crear o actualizar el deployment:
+### 10.5 Deployments
 
 ```bash
 poetry run python -m nyc_yellow_taxi.orchestration.deploy
 ```
 
-El deployment puede ejecutarse posteriormente desde la UI de Prefect.
 
-## Supuestos y limitaciones
 
-- Para la operación normal del pipeline, cada archivo Parquet mensual de NYC TLC se trata como inmutable una vez ingerido.
-- La reingesta de un mismo mes reemplaza el batch correspondiente en Bronze.
-- Silver utiliza prioridad por `source_file_month` e `ingested_at` para evitar que batches antiguos sobrescriban versiones más recientes del mismo `trip_id`.
-- Si un archivo histórico fuera republicado eliminando registros, esas eliminaciones no se propagan actualmente de forma automática desde Bronze hacia Silver.
-- La propagación de eliminaciones históricas se considera fuera del alcance de la versión actual y queda registrada como mejora futura.
-- La ejecución automática actualmente calcula el batch objetivo utilizando un desfase esperado de dos meses respecto del mes actual.
+## 11. Decisiones de diseño
 
-## Estado actual
+Algunas decisiones relevantes del proyecto:
 
-El pipeline puede ejecutarse end-to-end mediante Prefect:
+- Generación de un `trip_id` determinístico a partir de atributos estables del viaje.
+- Uso de agregaciones Gold para evitar consultar la fact directamente desde BI.
+- Retención diferenciada (Tiered Retention) entre detalle y agregaciones.
+- Reconstrucción de particiones afectadas por late-arriving data.
+- Geometrías almacenadas una sola vez en `dim_taxi_zones`.
+- Date/hour spines para representar correctamente períodos sin viajes.
+- Backfill separado de la operación mensual.
+- Serving layer parametrizada para unificar distintos granos analíticos.
+- Uso de parámetros globales en la serving layer y desactivación intencional del cross-filtering.
 
-```text
-NYC TLC
-   ↓
-  dlt
-   ↓
-Bronze
-   ↓
-  dbt
-   ↓
-Silver
-   ↓
- Gold
-   ↓
-dbt tests
-   ↓
-Pipeline Completed
-```
 
-La siguiente etapa del proyecto contempla desplegar la orquestación utilizando **Prefect Cloud como control plane y un worker persistente en infraestructura propia**.
+## 12. Futuras mejoras 📈
+
+Algunas mejoras posibles para futuras versiones son:
+
+- **Detección dinámica del último batch disponible en NYC TLC:** reemplazar el desfase fijo de cuatro meses por una verificación automática de disponibilidad de archivos Parquet, retrocediendo al último mes publicado cuando el objetivo aún no esté disponible.
+
+- **Mayor robustez en backfills:** automatizar el manejo del contexto necesario para late-arriving data, evitando que el usuario tenga que incluir manualmente meses anteriores al reconstruir períodos históricos.
+
+- **CI para validación del proyecto:** ejecutar automáticamente en cada Pull Request validaciones como tests de Python, `dbt parse`, unit tests y otras comprobaciones estáticas antes de permitir cambios sobre `main`.
+
+- **Observabilidad de calidad de datos:** complementar las alertas de ejecución con controles sobre volumen de registros, freshness, variaciones anómalas y otras métricas del pipeline.
+
+- **Optimización de la serving layer a mayor escala:** evaluar la materialización de parte de la lógica actualmente ejecutada como Custom Query si el volumen, costo de consulta o latencia del dashboard justifican una capa de serving persistente (Solo si se justifica).
