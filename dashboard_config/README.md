@@ -1,10 +1,10 @@
 # Configuración del dashboard
 
-Esta carpeta contiene la capa de serving SQL utilizada por el dashboard en Looker Studio.
+Esta carpeta contiene la capa de serving SQL utilizada por el dashboard en Data Studio.
 
 ## Archivos
 
-- `looker_serving_query.sql`: consulta parametrizada de BigQuery usada como fuente principal del dashboard.
+- `data_serving_query.sql`: consulta parametrizada de BigQuery usada como fuente principal del dashboard.
 
 ## Parámetros
 

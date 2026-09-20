@@ -224,7 +224,11 @@ data/*
 !data/.gitkeep
 *.parquet
 *.csv
-notebooks/exploration/
+notebooks/
 *.duckdb
 .dlt/
 !dbt/nyc_yellow_taxi/seeds/*.csv
+.codex/
+.agents/
+target/
+dbt_packages/
