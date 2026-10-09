@@ -64,6 +64,8 @@ and not is_total_amount_negative
 and not is_fare_negative
 and not is_congestion_surcharge_negative 
 and not is_airport_fee_negative 
+and date(tpep_pickup_datetime) >= date_sub(source_file_month, interval 1 month) -- Solo se admiten viajes del mes fuente y del mes anterior.
+and date(tpep_pickup_datetime) < date_add(source_file_month, interval 1 month)
 {% if is_incremental() %}
 and source_file_month = date('{{ var("batch_month") }}')
 {% endif %}

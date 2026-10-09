@@ -15,14 +15,17 @@ with
 {% if is_incremental() %}
 
 affected_dates as (
-
     select distinct
         date(tpep_pickup_datetime) as pickup_date
-
     from {{ ref('yellow_trips') }}
-
     where source_file_month = date('{{ var("batch_month") }}')
 
+      -- Admitir únicamente viajes de N y N-1
+      and date(tpep_pickup_datetime) >=
+          date_sub(source_file_month, interval 1 month)
+
+      and date(tpep_pickup_datetime) <
+          date_add(source_file_month, interval 1 month)
 ),
 
 {% endif %}
