@@ -418,3 +418,5 @@ Algunas mejoras posibles para futuras versiones son:
 - **Observabilidad de calidad de datos:** complementar las alertas de ejecución con controles sobre volumen de registros, freshness, variaciones anómalas y otras métricas del pipeline.
 
 - **Optimización de la serving layer a mayor escala:** evaluar la materialización de parte de la lógica actualmente ejecutada como Custom Query si el volumen, costo de consulta o latencia del dashboard justifican una capa de serving persistente (Solo si se justifica).
+
+- **Creación de test unitarios**

@@ -43,14 +43,17 @@ def ingest_month(batch_month: str) -> None:
 
 
 @task
-def run_dbt_transformations(batch_month: str) -> None:
+def run_dbt_transformations(
+    batch_month: str,
+    selector: str = "yellow_trips+",
+) -> None:
     command = [
         "dbt",
         "run",
         "--profiles-dir",
         str(DBT_PROJECT_DIR),
         "--select",
-        "yellow_trips+",
+        *selector.split(),
         "--vars",
         f"batch_month: {batch_month}",
     ]
@@ -108,15 +111,43 @@ def cleanup_old_data(
 
 
 @flow
-def monthly_taxi_pipeline(batch_month: str | None = None, retention_mode: str = "standard") -> None:
+def monthly_taxi_pipeline(
+    batch_month: str | None = None,
+    retention_mode: str = "standard",
+    perform_cleanup: bool = True,
+    warmup: bool = False,
+) -> None:
+    if retention_mode not in {"standard", "backfill"}:
+        raise ValueError(
+            f"Modo de retención no válido: {retention_mode}"
+        )
+
+    if warmup and perform_cleanup:
+        raise ValueError(
+            "El warm-up no debe ejecutar cleanup"
+        )
+
     configure_gcp_credentials()
 
     batch_month = batch_month or get_target_batch_month()
 
     ingest_month(batch_month)
+
+    if warmup:
+        run_dbt_transformations(
+            batch_month,
+            selector="yellow_trips fct_taxi_trips",
+        )
+        return
+
     run_dbt_transformations(batch_month)
     run_dbt_tests(batch_month)
-    cleanup_old_data(batch_month=batch_month, retention_mode=retention_mode)
+
+    if perform_cleanup:
+        cleanup_old_data(
+            batch_month=batch_month,
+            retention_mode=retention_mode,
+        )
 
 if __name__ == "__main__":
     monthly_taxi_pipeline()
